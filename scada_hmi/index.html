@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>220kV Substation Digital Twin SCADA & Relay Protection System</title>
+
+    <!-- Google Fonts & Chart.js -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: #151c2e;
+            --panel-border: #232f48;
+            --accent-cyan: #00f2ff;
+            --accent-green: #00ff88;
+            --accent-red: #ff3366;
+            --accent-amber: #ffaa00;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        /* Header Bar */
+        .scada-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #151c2e 0%, #0d1322 100%);
+            border: 1px solid var(--panel-border);
+            padding: 16px 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .scada-title h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: var(--accent-cyan);
+            letter-spacing: 1px;
+        }
+        .scada-title p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--accent-green);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            color: var(--accent-green);
+        }
+
+        .status-pulse {
+            width: 10px;
+            height: 10px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-green);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Main Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+
+        .panel-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            color: var(--accent-cyan);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Single Line Diagram SVG Container */
+        .sld-container {
+            width: 100%;
+            height: 340px;
+            background: #090d16;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Meters Row */
+        .meters-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .meter-card {
+            background-color: #0d1322;
+            border: 1px solid var(--panel-border);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .meter-label { font-size: 0.75rem; color: var(--text-muted); }
+        .meter-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.25rem;
+            color: var(--accent-cyan);
+            margin-top: 4px;
+        }
+
+        /* Controls Panel */
+        .control-group {
+            margin-bottom: 15px;
+        }
+        .control-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .control-group select, .control-group input {
+            width: 100%;
+            padding: 10px;
+            background-color: #090d16;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-inject {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #ff3366 0%, #d90429 100%);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(255, 51, 102, 0.3);
+            transition: all 0.2s ease;
+        }
+        .btn-inject:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(255, 51, 102, 0.5);
+        }
+
+        .btn-reset {
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            background: #1e293b;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        /* Event Annunciator Log */
+        .annunciator-box {
+            height: 180px;
+            background-color: #090d16;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+        }
+        .log-entry { margin-bottom: 6px; }
+        .log-trip { color: var(--accent-red); font-weight: bold; }
+        .log-info { color: var(--accent-green); }
+
+        /* Chart Canvas */
+        .chart-container {
+            position: relative;
+            height: 240px;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .meters-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SCADA Header -->
+    <div class="scada-header">
+        <div class="scada-title">
+            <h1>220kV SWITCHYARD DIGITAL-TWIN SCADA</h1>
+            <p>Verilog HDL Numerical Relay & SCADA Protection Framework | NTPC Switchyard Architecture</p>
+        </div>
+        <div class="status-badge">
+            <div class="status-pulse" id="sys-pulse"></div>
+            <span id="sys-status">GRID HEALTHY (220.4 kV)</span>
+        </div>
+    </div>
+
+    <!-- Dashboard Grid -->
+    <div class="dashboard-grid">
+        
+        <!-- Left Column: SLD & Live Waveforms -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            
+            <!-- Panel 1: Single Line Diagram -->
+            <div class="panel">
+                <div class="panel-title">
+                    <span>220kV SUBSTATION SINGLE LINE DIAGRAM (SLD)</span>
+                    <span style="font-size: 0.75rem; color: var(--accent-cyan)">ANSI 87T | 50/51 | 21 | 79 | 50BF</span>
+                </div>
+                <div class="sld-container">
+                    <svg width="100%" height="100%" viewBox="0 0 700 300">
+                        <!-- Busbars -->
+                        <line x1="50" y1="40" x2="650" y2="40" stroke="#00f2ff" stroke-width="4" id="bus-a" />
+                        <text x="60" y="30" fill="#00f2ff" font-family="Orbitron" font-size="12">220kV BUS-BAR A</text>
+
+                        <line x1="50" y1="80" x2="650" y2="80" stroke="#00f2ff" stroke-width="4" id="bus-b" />
+                        <text x="60" y="70" fill="#00f2ff" font-family="Orbitron" font-size="12">220kV BUS-BAR B</text>
+
+                        <!-- Feeder 1 Line (Transmission Line 220kV) -->
+                        <line x1="150" y1="40" x2="150" y2="120" stroke="#ffffff" stroke-width="2" />
+                        <!-- Circuit Breaker CB1 -->
+                        <rect x="135" y="120" width="30" height="30" fill="#00ff88" stroke="#ffffff" stroke-width="2" id="cb1-box" />
+                        <text x="175" y="140" fill="#e2e8f0" font-family="Inter" font-size="11">CB-101 (Line 1)</text>
+                        <line x1="150" y1="150" x2="150" y2="240" stroke="#ffffff" stroke-width="2" />
+                        <text x="110" y="260" fill="#00f2ff" font-family="Orbitron" font-size="12">220kV FEEDER 1</text>
+
+                        <!-- Transformer Bay (220kV / 66kV ICT) -->
+                        <line x1="450" y1="40" x2="450" y2="120" stroke="#ffffff" stroke-width="2" />
+                        <!-- Circuit Breaker CB2 -->
+                        <rect x="435" y="120" width="30" height="30" fill="#00ff88" stroke="#ffffff" stroke-width="2" id="cb2-box" />
+                        <text x="475" y="140" fill="#e2e8f0" font-family="Inter" font-size="11">CB-201 (Xmer)</text>
+                        <line x1="450" y1="150" x2="450" y2="180" stroke="#ffffff" stroke-width="2" />
+                        
+                        <!-- Transformer Symbol (2 Interlocking Circles) -->
+                        <circle cx="450" cy="195" r="15" fill="none" stroke="#ffaa00" stroke-width="3" />
+                        <circle cx="450" cy="215" r="15" fill="none" stroke="#ffaa00" stroke-width="3" />
+                        <text x="480" y="210" fill="#ffaa00" font-family="Orbitron" font-size="12">220/66kV 160MVA TR-1</text>
+
+                        <line x1="450" y1="230" x2="450" y2="270" stroke="#ffaa00" stroke-width="2" />
+                        <line x1="350" y1="270" x2="550" y2="270" stroke="#ffaa00" stroke-width="3" />
+                        <text x="360" y="290" fill="#ffaa00" font-family="Orbitron" font-size="11">66kV BUSBAR</text>
+                    </svg>
+                </div>
+
+                <!-- Meters Row -->
+                <div class="meters-grid">
+                    <div class="meter-card">
+                        <div class="meter-label">SYSTEM VOLTAGE</div>
+                        <div class="meter-value" id="m-voltage">220.4 kV</div>
+                    </div>
+                    <div class="meter-card">
+                        <div class="meter-label">LOAD CURRENT</div>
+                        <div class="meter-value" id="m-current">485.2 A</div>
+                    </div>
+                    <div class="meter-card">
+                        <div class="meter-label">GRID FREQUENCY</div>
+                        <div class="meter-value" id="m-freq">50.02 Hz</div>
+                    </div>
+                    <div class="meter-card">
+                        <div class="meter-label">APPARENT IMPEDANCE</div>
+                        <div class="meter-value" id="m-imp">26.3 Ω</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 2: Live Oscilloscope Waveforms -->
+            <div class="panel">
+                <div class="panel-title">REAL-TIME CT / PT WAVEFORM OSCILLOGRAM</div>
+                <div class="chart-container">
+                    <canvas id="waveformChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Control & Event Annunciator -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            
+            <!-- Panel 3: Fault Injector & Config -->
+            <div class="panel">
+                <div class="panel-title">DIGITAL TWIN FAULT INJECTOR</div>
+                
+                <div class="control-group">
+                    <label>Select Grid Fault Scenario:</label>
+                    <select id="fault-type">
+                        <option value="NORMAL">Normal Operation (220kV 500A)</option>
+                        <option value="SLG_FAULT_A">Single Line-to-Ground Fault (SLG Phase A)</option>
+                        <option value="3PHASE_FAULT">3-Phase Symmetrical Grid Fault (8kA)</option>
+                        <option value="INRUSH_TRANSFORMER">Transformer Inrush Current (2nd Harm 38%)</option>
+                        <option value="TRANSFORMER_INTERNAL_FAULT">Transformer Internal Winding Fault (87T)</option>
+                        <option value="CT_SATURATION">High-Current CT Core Saturation</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>IDMT 51 Pickup Current (Amps):</label>
+                    <input type="number" id="pickup-oc" value="1000" step="100">
+                </div>
+
+                <div class="control-group">
+                    <label>Distance Zone 1 Reach (Ohms):</label>
+                    <input type="number" id="reach-z1" value="12.0" step="0.5">
+                </div>
+
+                <button class="btn-inject" onclick="runSimulation()">INJECT FAULT SCENARIO</button>
+                <button class="btn-reset" onclick="resetGrid()">RESET CIRCUIT BREAKER (SCADA CLOSE)</button>
+            </div>
+
+            <!-- Panel 4: SCADA Event Annunciator Log -->
+            <div class="panel">
+                <div class="panel-title">SCADA EVENT & ALARM LOG</div>
+                <div class="annunciator-box" id="event-log">
+                    <div class="log-entry log-info">[0.0 ms] SCADA System Initialized. Grid Normal at 220kV.</div>
+                    <div class="log-entry log-info">[0.0 ms] All Relays (87T, 50/51, 21, 79) ARMED.</div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Chart.js Setup
+        const ctx = document.getElementById('waveformChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 100}, (_, i) => (i * 2).toFixed(1)),
+                datasets: [
+                    { label: 'Phase A Current (A)', borderColor: '#ff3366', data: [], borderWidth: 2, pointRadius: 0 },
+                    { label: 'Phase B Current (A)', borderColor: '#ffaa00', data: [], borderWidth: 2, pointRadius: 0 },
+                    { label: 'Phase C Current (A)', borderColor: '#00f2ff', data: [], borderWidth: 2, pointRadius: 0 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: { display: true, text: 'Time (ms)', color: '#94a3b8' }, grid: { color: '#1e293b' } },
+                    y: { title: { display: true, text: 'Current (A)', color: '#94a3b8' }, grid: { color: '#1e293b' } }
+                },
+                plugins: { legend: { labels: { color: '#e2e8f0' } } }
+            }
+        });
+
+        // Generate synthetic initial sine wave data
+        function generateSineWave(amplitude, offset=0) {
+            const data = [];
+            for(let i=0; i<100; i++) {
+                const t = i * 0.002;
+                data.push(amplitude * Math.sin(2 * Math.pi * 50 * t + offset));
+            }
+            return data;
+        }
+
+        function resetGrid() {
+            document.getElementById('sys-pulse').style.backgroundColor = '#00ff88';
+            document.getElementById('sys-pulse').style.boxShadow = '0 0 10px #00ff88';
+            document.getElementById('sys-status').innerText = 'GRID HEALTHY (220.4 kV)';
+            document.getElementById('sys-status').style.color = '#00ff88';
+            
+            document.getElementById('cb1-box').setAttribute('fill', '#00ff88');
+            document.getElementById('cb2-box').setAttribute('fill', '#00ff88');
+
+            document.getElementById('m-voltage').innerText = '220.4 kV';
+            document.getElementById('m-current').innerText = '485.2 A';
+            document.getElementById('m-imp').innerText = '26.3 Ω';
+
+            chart.data.datasets[0].data = generateSineWave(700, 0);
+            chart.data.datasets[1].data = generateSineWave(700, -2.09);
+            chart.data.datasets[2].data = generateSineWave(700, 2.09);
+            chart.update();
+
+            const log = document.getElementById('event-log');
+            log.innerHTML += `<div class="log-entry log-info">[+0.0 ms] MANUAL CLOSE Command Issued. Circuit Breakers CLOSED.</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function runSimulation() {
+            const scenario = document.getElementById('fault-type').value;
+            const log = document.getElementById('event-log');
+
+            if (scenario === 'SLG_FAULT_A') {
+                document.getElementById('sys-pulse').style.backgroundColor = '#ff3366';
+                document.getElementById('sys-pulse').style.boxShadow = '0 0 10px #ff3366';
+                document.getElementById('sys-status').innerText = 'FAULT DETECTED: TRIP 50/21';
+                document.getElementById('sys-status').style.color = '#ff3366';
+
+                document.getElementById('cb1-box').setAttribute('fill', '#ff3366');
+
+                document.getElementById('m-voltage').innerText = '33.1 kV';
+                document.getElementById('m-current').innerText = '4520.0 A';
+                document.getElementById('m-imp').innerText = '4.2 Ω';
+
+                // Faulted Phase A waveform
+                const faData = generateSineWave(4500, 0);
+                for(let i=30; i<100; i++) faData[i] = 0; // Breaker trip cleared fault
+
+                chart.data.datasets[0].data = faData;
+                chart.data.datasets[1].data = generateSineWave(700, -2.09);
+                chart.data.datasets[2].data = generateSineWave(700, 2.09);
+                chart.update();
+
+                log.innerHTML += `<div class="log-entry log-trip">[52.1 ms] FAULT: Single Line to Ground (Phase A) Inception!</div>`;
+                log.innerHTML += `<div class="log-entry log-trip">[54.2 ms] TRIP 50: Instantaneous Overcurrent Actuated! (I=4.5kA)</div>`;
+                log.innerHTML += `<div class="log-entry log-trip">[54.8 ms] TRIP 21: Mho Distance Zone 1 Actuated! (Z=4.2Ω)</div>`;
+                log.innerHTML += `<div class="log-entry log-info">[60.0 ms] BCU: Breaker CB-101 OPENED. Fault Cleared in 8.0 ms.</div>`;
+            } else if (scenario === 'INRUSH_TRANSFORMER') {
+                document.getElementById('sys-pulse').style.backgroundColor = '#ffaa00';
+                document.getElementById('sys-pulse').style.boxShadow = '0 0 10px #ffaa00';
+                document.getElementById('sys-status').innerText = 'INRUSH: 87T BLOCKED';
+                document.getElementById('sys-status').style.color = '#ffaa00';
+
+                document.getElementById('m-voltage').innerText = '219.8 kV';
+                document.getElementById('m-current').innerText = '2890.0 A';
+
+                log.innerHTML += `<div class="log-entry log-info">[50.0 ms] Transformer TR-1 Energized. Magnetizing Inrush Current Detected.</div>`;
+                log.innerHTML += `<div class="log-entry log-info">[52.0 ms] 87T: 2nd Harmonic Ratio = 38.2% (> 15% Threshold). TRIP BLOCKED!</div>`;
+                log.innerHTML += `<div class="log-entry log-info">[150.0 ms] Inrush Decayed. Transformer Stabilized Online.</div>`;
+            } else if (scenario === 'TRANSFORMER_INTERNAL_FAULT') {
+                document.getElementById('sys-pulse').style.backgroundColor = '#ff3366';
+                document.getElementById('sys-status').innerText = 'TRIP 87T: XMER FAULT';
+                document.getElementById('cb2-box').setAttribute('fill', '#ff3366');
+
+                log.innerHTML += `<div class="log-entry log-trip">[50.0 ms] FAULT: Transformer Internal Winding Short Circuit!</div>`;
+                log.innerHTML += `<div class="log-entry log-trip">[53.1 ms] TRIP 87T: Differential Relay Tripped! (Idiff=5.2A)</div>`;
+                log.innerHTML += `<div class="log-entry log-info">[58.0 ms] BCU: Breaker CB-201 OPENED. Transformer Isolated.</div>`;
+            } else {
+                resetGrid();
+            }
+
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Initialize grid state
+        resetGrid();
+    </script>
+</body>
+</html>
