@@ -141,9 +141,4 @@ python3 scada_hmi/server.py
 
 ---
 
-## Resume Description (Ready-to-Use)
 
-**Digital-Twin 220kV Switchyard Substation Protection & SCADA System** | *Verilog HDL, PyTorch/Python, DSP, MATLAB Simulink*
-- Designed and modeled a synthesizable Verilog HDL & DSP Digital-Twin framework for 220kV/66kV Switchyard Substation Protection featuring **ANSI 87T** (Dual-slope differential with 2nd harmonic inrush restraint), **ANSI 50/51** (IDMT IEC 60255 curves), and **ANSI 21** (3-Zone Mho Distance Relay).
-- Implemented Discrete Fourier Transform (DFT) algorithms for 50Hz fundamental and 100Hz harmonic estimation, evaluating dynamic 3-phase CT/PT fault signals ($I_{fault} > 8\text{ kA}$) with 2-cycle breaker clearance.
-- Developed an interactive HTML5/JS SCADA HMI dashboard displaying real-time Single Line Diagrams (SLD), SF6 breaker statuses, live oscillograms, and automated fault annunciator logs.
